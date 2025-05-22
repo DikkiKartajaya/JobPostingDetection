@@ -1,0 +1,4 @@
+streamlit
+numpy==1.23
+tensorflow==2.12
+nltk
