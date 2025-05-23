@@ -3,16 +3,19 @@ import numpy as np
 import pickle
 import html
 import nltk
+from langdetect import detect
+from deep_translator import GoogleTranslator
 nltk.download('stopwords')
 nltk.download('wordnet')
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 import re
 import time
-import string
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from gensim.models import Word2Vec
+
+
 
 # Load tokenizer
 with open('tokenizer.pkl', 'rb') as f:
@@ -29,6 +32,25 @@ model = load_model('model_fake_job_detection.h5')
 max_len = 100
 vocab_size = len(tokenizer.word_index) + 1
 
+
+#Detect and translate function
+def detect_and_translate(text):
+    try:
+        lang = detect(text)
+    except:
+        lang = "unknown"
+
+    if lang != 'en':
+        try:
+            translated_text  = GoogleTranslator(source=lang, target='en').translate(text)
+            return translated_text 
+        except Exception as e:
+            st.error(f"❌ Gagal menerjemahkan teks dari bahasa {lang}. Silakan coba lagi.")
+            return ""
+    else:
+        return text
+    
+
 # Preprocessing input
 stop_words = set(stopwords.words('english'))
 lemmatizer = WordNetLemmatizer()
@@ -43,10 +65,10 @@ def preprocess_input(text):
     text = re.sub(r'\.(\w)', r'. \1', text)
     text = re.sub(r'\r|\n', ' ', text) # Ganti newline dengan spasi
     text = re.sub(r'\d+', '', text) # Hapus angka
-    text = ' '.join(word for word in text.split() if word not in stop_words) #Stopwords
-    tokens = text.lower().split()
-    tokens = [lemmatizer.lemmatize(word) for word in tokens] #Lemmatization
-    sequence = tokenizer.texts_to_sequences([tokens])
+    words = text.lower().split()
+    words = [word for word in words if word not in stop_words and len(word) > 1] #Stopwords
+    words = [lemmatizer.lemmatize(word) for word in words] #Lemmatization
+    sequence = tokenizer.texts_to_sequences([words])
     padded = pad_sequences(sequence, maxlen=max_len, padding='post')
     return padded
 
@@ -58,6 +80,7 @@ st.write("Masukkan teks iklan lowongan kerja untuk diklasifikasikan.")
 user_input = st.text_area("Input Teks", height=150, placeholder="Contoh: 'We are hiring remote data entry specialist with no experience needed...'")
 
 if st.button("🚀 Prediksi", type="primary"):
+    translated_input = detect_and_translate(user_input)
     if user_input.strip() == "":
         st.warning("⚠️ Silakan masukkan teks terlebih dahulu.")
     else:
@@ -67,7 +90,7 @@ if st.button("🚀 Prediksi", type="primary"):
             time.sleep(0.5)
             
             # Process the input
-            processed_input = preprocess_input(user_input)
+            processed_input = preprocess_input(translated_input)
             prediction = model.predict(processed_input)[0][0]
 
         # Determine label and emoji
