@@ -26,7 +26,7 @@ w2v_model = Word2Vec.load('word2vec_job_posting.model')
 vector_size = w2v_model.vector_size
 
 # Load LSTM model
-model = load_model('model_fake_job_detection.h5')
+model = load_model('FakeJobPostingModel.h5')
 
 # Konfigurasi
 max_len = 100
